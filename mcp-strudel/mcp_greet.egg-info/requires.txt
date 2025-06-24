@@ -1,0 +1,5 @@
+chainlit-mcp-client@ git+https://github.com/calvinw/chainlit-mcp-client
+uvicorn
+fastmcp
+fastapi
+scipy

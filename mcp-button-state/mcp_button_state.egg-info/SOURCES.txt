@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+server.py
+sse_server.py
+mcp_button_state.egg-info/PKG-INFO
+mcp_button_state.egg-info/SOURCES.txt
+mcp_button_state.egg-info/dependency_links.txt
+mcp_button_state.egg-info/requires.txt
+mcp_button_state.egg-info/top_level.txt

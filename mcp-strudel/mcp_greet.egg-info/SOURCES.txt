@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+server.py
+sse_server.py
+mcp_greet.egg-info/PKG-INFO
+mcp_greet.egg-info/SOURCES.txt
+mcp_greet.egg-info/dependency_links.txt
+mcp_greet.egg-info/requires.txt
+mcp_greet.egg-info/top_level.txt
