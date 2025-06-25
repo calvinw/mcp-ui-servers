@@ -36,15 +36,15 @@ def handle_state_response(request_id: str, state: Dict[str, Any]):
         logger.info(f"Resolved state request {request_id} with state: {state}")
 
 @mcp.tool()
-async def get_page_data(session_id: str) -> str:
+async def get_buttons_state(session_id: str) -> str:
     """
-    Get the current page data from the web interface via WebSocket.
+    Get the current button states from the web interface via WebSocket.
     
     Args:
         session_id: Required session ID to target specific browser connection
         
     Returns:
-        JSON string containing page title, URL, content, and links from the web interface
+        JSON string containing the current state of the 3 toggle buttons
     """
     global websocket_manager, pending_state_requests
     

@@ -23,77 +23,79 @@
     </div>
     
     <div class="flex-1 flex flex-col items-center justify-center gap-8">
-        <!-- Main Button -->
-        <div class="bg-white p-8 rounded-lg shadow-lg">
-            <button 
-                id="mainButton"
-                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-8 rounded-lg text-xl transition-all duration-200 hover:scale-105 shadow-lg"
-            >
-                Click Me!
-            </button>
+        <!-- Button Controls -->
+        <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <h2 class="text-2xl font-semibold mb-6 text-center">Toggle Buttons</h2>
+            
+            <div class="space-y-4">
+                <!-- Button 1 -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <span class="text-lg font-medium">Button 1</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="button1" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- Button 2 -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <span class="text-lg font-medium">Button 2</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="button2" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- Button 3 -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <span class="text-lg font-medium">Button 3</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="button3" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Button Status Summary -->
+        <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h3 class="text-lg font-semibold mb-4">Button Status:</h3>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center p-3 bg-blue-50 rounded">
+                    <span class="font-medium">Button 1:</span>
+                    <span id="status1" class="text-blue-700 font-semibold">Off</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-green-50 rounded">
+                    <span class="font-medium">Button 2:</span>
+                    <span id="status2" class="text-green-700 font-semibold">Off</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-purple-50 rounded">
+                    <span class="font-medium">Button 3:</span>
+                    <span id="status3" class="text-purple-700 font-semibold">Off</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <span class="font-medium">Last Updated:</span>
+                    <span id="lastUpdated" class="text-gray-600">Never</span>
+                </div>
+            </div>
         </div>
         
         <!-- State Display -->
         <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 class="text-lg font-semibold mb-4">Current Zustand State:</h2>
-            <pre id="stateDisplay" class="bg-gray-100 p-4 rounded text-sm overflow-auto">
+            <h2 class="text-lg font-semibold mb-4">Current State:</h2>
+            <pre id="stateDisplay" class="bg-gray-100 p-4 rounded text-sm overflow-auto whitespace-pre-wrap">
                 Loading state...
             </pre>
         </div>
-        
-        <!-- Additional Controls -->
-        <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h3 class="text-lg font-semibold mb-4">Additional Controls:</h3>
-            <div class="space-y-3">
-                <button 
-                    id="resetButton"
-                    class="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded transition-all"
-                >
-                    Reset State
-                </button>
-                <button 
-                    id="toggleModeButton"
-                    class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded transition-all"
-                >
-                    Toggle Mode
-                </button>
-            </div>
-        </div>
-        
-        <!-- Sample Links for Web Scraping Demo -->
-        <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h3 class="text-lg font-semibold mb-4">Sample Links:</h3>
-            <div class="space-y-2 text-sm">
-                <a href="https://github.com/microsoft/mcp" class="text-blue-600 hover:underline block">MCP Protocol on GitHub</a>
-                <a href="https://zustand.js.org/" class="text-blue-600 hover:underline block">Zustand Documentation</a>
-                <a href="https://fastapi.tiangolo.com/" class="text-blue-600 hover:underline block">FastAPI Framework</a>
-                <a href="https://websockets.readthedocs.io/" class="text-blue-600 hover:underline block">WebSockets Documentation</a>
-                <a href="/debug/connections" class="text-green-600 hover:underline block">Debug Connections</a>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Message Log -->
-    <div id="messageLog" class="bg-gray-900 text-gray-500 p-4 rounded-lg h-32 overflow-y-auto font-mono text-sm mt-6 whitespace-pre-wrap">
-        Initializing button state demo...
     </div>
 
     <script>
-        // Custom state management (Zustand-inspired)
+        // Simple reactive state management
         let buttonState = {
-            isClicked: false,
-            clickCount: 0,
-            lastClickTime: null,
-            mode: 'normal', // 'normal' or 'excited'
-            
-            // Web page metadata (updated dynamically)
-            pageData: {
-                title: document.title,
-                url: window.location.href,
-                content: '',
-                links: [],
-                timestamp: Date.now()
-            }
+            button1: false,
+            button2: false,
+            button3: false,
+            lastUpdatedTime: Date.now()
         };
         
         const stateListeners = [];
@@ -112,43 +114,27 @@
                 };
             }
         };
-        
-        // Function to capture current page data
-        function updatePageData() {
-            const pageData = {
-                title: document.title,
-                url: window.location.href,
-                content: document.body.innerText.substring(0, 500) + '...', // Truncate for brevity
-                links: Array.from(document.links).slice(0, 10).map(a => `${a.innerText.trim()}: ${a.href}`),
-                timestamp: Date.now()
-            };
-            
-            useStore.setState({ pageData });
-            return pageData;
-        }
-        
-        // Actions (Zustand-style)
+
+        // Actions for state management
         const actions = {
-            clickButton: () => {
+            toggleButton1: (checked) => {
                 useStore.setState({
-                    isClicked: !buttonState.isClicked,
-                    clickCount: buttonState.clickCount + 1,
-                    lastClickTime: Date.now()
+                    button1: checked,
+                    lastUpdatedTime: Date.now()
                 });
             },
             
-            resetState: () => {
+            toggleButton2: (checked) => {
                 useStore.setState({
-                    isClicked: false,
-                    clickCount: 0,
-                    lastClickTime: null,
-                    mode: 'normal'
+                    button2: checked,
+                    lastUpdatedTime: Date.now()
                 });
             },
             
-            toggleMode: () => {
+            toggleButton3: (checked) => {
                 useStore.setState({
-                    mode: buttonState.mode === 'normal' ? 'excited' : 'normal'
+                    button3: checked,
+                    lastUpdatedTime: Date.now()
                 });
             }
         };
@@ -157,27 +143,17 @@
         let ws = null;
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
-        const messageLog = document.getElementById('messageLog');
         const stateDisplay = document.getElementById('stateDisplay');
-        const mainButton = document.getElementById('mainButton');
-        const resetButton = document.getElementById('resetButton');
-        const toggleModeButton = document.getElementById('toggleModeButton');
+        const button1 = document.getElementById('button1');
+        const button2 = document.getElementById('button2');
+        const button3 = document.getElementById('button3');
+        const status1 = document.getElementById('status1');
+        const status2 = document.getElementById('status2');
+        const status3 = document.getElementById('status3');
+        const lastUpdated = document.getElementById('lastUpdated');
 
         // Get session ID from the placeholder
         const sessionId = document.getElementById('sessionId').textContent.replace('session_id: ', '').trim();
-
-        function addLogEntry(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const logLine = `[${timestamp}] ${message}\n`;
-            messageLog.textContent += logLine;
-            messageLog.scrollTop = messageLog.scrollHeight;
-            
-            // Keep only last 50 lines
-            const lines = messageLog.textContent.split('\n');
-            if (lines.length > 50) {
-                messageLog.textContent = lines.slice(-50).join('\n');
-            }
-        }
 
         function updateConnectionStatus(connected) {
             if (connected) {
@@ -193,20 +169,13 @@
             const state = useStore.getState();
             stateDisplay.textContent = JSON.stringify(state, null, 2);
             
-            // Update button appearance based on state
-            if (state.isClicked) {
-                mainButton.className = 'bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg text-xl transition-all duration-200 hover:scale-105 shadow-lg';
-                mainButton.textContent = `Clicked! (${state.clickCount})`;
-            } else {
-                mainButton.className = 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-8 rounded-lg text-xl transition-all duration-200 hover:scale-105 shadow-lg';
-                mainButton.textContent = 'Click Me!';
-            }
+            // Update UI displays
+            status1.textContent = state.button1 ? 'On' : 'Off';
+            status2.textContent = state.button2 ? 'On' : 'Off';
+            status3.textContent = state.button3 ? 'On' : 'Off';
             
-            // Update button style based on mode
-            if (state.mode === 'excited') {
-                mainButton.style.animation = 'pulse 1s infinite';
-            } else {
-                mainButton.style.animation = '';
+            if (state.lastUpdatedTime) {
+                lastUpdated.textContent = new Date(state.lastUpdatedTime).toLocaleTimeString();
             }
         }
 
@@ -221,7 +190,6 @@
             
             ws.onopen = function() {
                 updateConnectionStatus(true);
-                addLogEntry('WebSocket connected to MCP server');
             };
             
             ws.onmessage = async function(event) {
@@ -230,74 +198,60 @@
                     console.log('WebSocket received message:', data);
                     
                     if (data.type === 'get-page-data') {
-                        // MCP server is requesting current page data
-                        // First update page data to get fresh web content
-                        const pageData = updatePageData();
+                        // MCP server is requesting current button data
+                        const currentState = useStore.getState();
                         
                         const response = {
                             type: 'button-state-response',
                             request_id: data.request_id,
-                            state: pageData,
+                            state: currentState,
                             timestamp: Date.now()
                         };
                         
                         ws.send(JSON.stringify(response));
-                        addLogEntry(`Sent page data to MCP server (request: ${data.request_id})`);
                         
                     } else if (data.type === 'ping') {
                         ws.send(JSON.stringify({type: 'pong'}));
-                        
-                    } else {
-                        addLogEntry(`Unknown message type: ${data.type}`);
                     }
                     
                 } catch (error) {
                     console.error('WebSocket message error:', error);
-                    addLogEntry(`Message parse error: ${error.message}`);
                 }
             };
             
             ws.onclose = function() {
                 updateConnectionStatus(false);
-                addLogEntry('WebSocket disconnected, attempting to reconnect...');
                 setTimeout(connectWebSocket, 3000);
             };
             
             ws.onerror = function(error) {
                 console.error('WebSocket error:', error);
-                addLogEntry('WebSocket connection error');
             };
         }
 
         // Event listeners
-        mainButton.addEventListener('click', () => {
-            actions.clickButton();
-            addLogEntry('Main button clicked');
+        button1.addEventListener('change', (e) => {
+            actions.toggleButton1(e.target.checked);
         });
 
-        resetButton.addEventListener('click', () => {
-            actions.resetState();
-            addLogEntry('State reset');
+        button2.addEventListener('change', (e) => {
+            actions.toggleButton2(e.target.checked);
         });
 
-        toggleModeButton.addEventListener('click', () => {
-            actions.toggleMode();
-            addLogEntry(`Mode toggled to: ${useStore.getState().mode}`);
+        button3.addEventListener('change', (e) => {
+            actions.toggleButton3(e.target.checked);
         });
 
-        // Subscribe to store changes
+        // Subscribe to state changes
         useStore.subscribe(() => {
             updateStateDisplay();
         });
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            addLogEntry(`Button interface ready (session_id: ${sessionId})`);
-            updatePageData(); // Initialize page data
             updateStateDisplay();
             connectWebSocket();
         });
-
 
         console.log('Button State Demo initialized!');
     </script>
