@@ -29,7 +29,8 @@ function updateConnectionStatus(connected) {
 
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const sessionId = window.sessionId || 'unknown';
+    const wsUrl = `${protocol}//${window.location.host}/strudel/ws?session_id=${sessionId}`;
     
     ws = new WebSocket(wsUrl);
     

@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-ui-servers"
+version = "1.0.0"
+description = "Unified MCP servers with UI interfaces for Strudel and Button State"
+authors = [{name = "MCP UI Servers", email = "noreply@example.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "fastapi>=0.115.0",
+    "fastmcp>=2.8.0",
+    "uvicorn[standard]>=0.34.0",
+    "httpx>=0.25.0",
+    "websockets>=15.0.0",
+    "requests>=2.31.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/mcp-ui-servers"
+Repository = "https://github.com/your-org/mcp-ui-servers.git"
+Documentation = "https://github.com/your-org/mcp-ui-servers#readme"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mcp_ui_servers*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

@@ -10,7 +10,7 @@ from typing import List, Dict, Any
 from pathlib import Path
 import random
 import string
-from server import mcp, set_websocket_manager, handle_state_response
+from button_state_server import mcp, set_websocket_manager, handle_state_response
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
