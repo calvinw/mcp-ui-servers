@@ -43,14 +43,14 @@ start_server() {
     fi
 }
 
-start_server "Unified MCP Server" 8002 "." "unified_sse_server.py"
+start_server "Unified MCP Server" 8080 "." "unified_sse_server.py"
 
 echo "🚀 Server started!"
 echo "- MCP Endpoints:"
-echo "  - Strudel: http://localhost:8002/mcp-strudel/sse"
-echo "  - Button State: http://localhost:8002/mcp-button-state/sse"
+echo "  - Strudel: http://localhost:8080/mcp-strudel/sse"
+echo "  - Button State: http://localhost:8080/mcp-button-state/sse"
 echo "- UI Endpoints:"
-echo "  - Strudel: http://localhost:8002/strudel"
-echo "  - Button State: http://localhost:8002/button"
+echo "  - Strudel: http://localhost:8080/strudel"
+echo "  - Button State: http://localhost:8080/button"
 
 wait

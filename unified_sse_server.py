@@ -224,7 +224,7 @@ app.mount("/mcp-strudel", strudel_http_app)
 app.mount("/mcp-button-state", button_http_app)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8002))
+    port = int(os.environ.get("PORT", 8080))
     print(f"""
 🎵 MCP UI Servers Starting on port {port}!
 

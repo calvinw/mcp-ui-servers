@@ -179,3 +179,5 @@ Thumbs.db
 # Custom additions
 # Strudel reference directory (copy of github strudel directory)
 mcp-strudel/strudel/
+# Strudel docs directory (nested git repo causing submodule issues)
+mcp-strudel/docs/strudel/

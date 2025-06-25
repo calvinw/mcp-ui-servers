@@ -14,10 +14,10 @@ COPY mcp-strudel/ ./mcp-strudel/
 COPY mcp-button-state/ ./mcp-button-state/
 
 # Expose port for the unified proxy server
-EXPOSE 8002
+EXPOSE 8080
 
 # Set environment variables
-ENV PORT=8002
+ENV PORT=8080
 ENV PYTHONPATH=/app
 
 # Start script to run all three servers
