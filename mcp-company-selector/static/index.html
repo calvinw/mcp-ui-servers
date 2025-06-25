@@ -290,6 +290,66 @@
                         
                         ws.send(JSON.stringify(response));
                         
+                    } else if (data.type === 'set-company-data') {
+                        // MCP server is setting company data
+                        const company1 = data.company1;
+                        const company1Year = data.company1Year;
+                        const company2 = data.company2;
+                        const company2Year = data.company2Year;
+                        
+                        // Update the state
+                        useStore.setState({
+                            company1: company1,
+                            company1Year: company1Year,
+                            company2: company2,
+                            company2Year: company2Year,
+                            lastSelectionTime: Date.now()
+                        });
+                        
+                        // Update the UI dropdowns
+                        company1Select.value = company1;
+                        company1YearSelect.value = company1Year;
+                        company2Select.value = company2;
+                        company2YearSelect.value = company2Year;
+                        
+                    } else if (data.type === 'set-company1-data') {
+                        // MCP server is setting company1 data only
+                        console.log('Received set-company1-data:', data);
+                        const company = data.company;
+                        const year = data.year;
+                        
+                        console.log('Setting company1 to:', company, 'year:', year);
+                        
+                        // Update the state for company1 only
+                        useStore.setState({
+                            company1: company,
+                            company1Year: year,
+                            lastSelectionTime: Date.now()
+                        });
+                        
+                        // Update the UI dropdowns for company1 only
+                        company1Select.value = company;
+                        company1YearSelect.value = year;
+                        
+                    } else if (data.type === 'set-company2-data') {
+                        // MCP server is setting company2 data only
+                        console.log('Received set-company2-data:', data);
+                        const company = data.company;
+                        const year = data.year;
+                        
+                        console.log('Setting company2 to:', company, 'year:', year);
+                        
+                        // Update the state for company2 only
+                        useStore.setState({
+                            company2: company,
+                            company2Year: year,
+                            lastSelectionTime: Date.now()
+                        });
+                        
+                        // Update the UI dropdowns for company2 only
+                        company2Select.value = company;
+                        company2YearSelect.value = year;
+                        
                     } else if (data.type === 'ping') {
                         ws.send(JSON.stringify({type: 'pong'}));
                         
