@@ -18,6 +18,7 @@ import importlib.util
 # Add subdirectories to Python path
 sys.path.append(str(Path(__file__).parent / "mcp-button-state"))
 sys.path.append(str(Path(__file__).parent / "mcp-strudel"))
+sys.path.append(str(Path(__file__).parent / "mcp-company-selector"))
 
 # Import button state server
 button_path = Path(__file__).parent / "mcp-button-state" / "button_state_server.py"
@@ -33,16 +34,26 @@ strudel_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(strudel_module)
 strudel_mcp = strudel_module.mcp
 
+# Import company selector server
+company_path = Path(__file__).parent / "mcp-company-selector" / "company_selector_server.py"
+spec = importlib.util.spec_from_file_location("company_selector_server", company_path)
+company_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(company_module)
+company_mcp = company_module.mcp
+
 
 # Create WebSocket managers and make them available to servers
 strudel_manager = ConnectionManager()
 button_manager = ConnectionManager()
+company_manager = ConnectionManager()
 strudel_module.set_websocket_manager(strudel_manager)
 button_module.set_websocket_manager(button_manager)
+company_module.set_websocket_manager(company_manager)
 
 # Create SSE apps for each MCP server
 button_http_app = button_mcp.http_app(transport="sse", path='/sse')
 strudel_http_app = strudel_mcp.http_app(transport="sse", path='/sse')
+company_http_app = company_mcp.http_app(transport="sse", path='/sse')
 
 # Minimal OAuth endpoint (just enough for Claude.ai)
 async def oauth_metadata(request: Request):
@@ -137,6 +148,38 @@ async def button_ui():
     
     return HTMLResponse(content=html_content)
 
+@app.get("/company")
+async def company_ui():
+    """Serve Company Selector interface"""
+    session_id = company_manager.generate_session_id()
+    template_path = Path(__file__).parent / "mcp-company-selector" / "static" / "index.html"
+    
+    with open(template_path, 'r') as f:
+        html_content = f.read()
+    
+    # Inject session ID and update WebSocket URL
+    html_content = html_content.replace(
+        'SESSION_ID_PLACEHOLDER', 
+        session_id
+    )
+    # Update WebSocket URL to use the unified server path
+    old_content = html_content
+    html_content = html_content.replace('/ws?session_id=', '/company/ws?session_id=')
+    # Also try alternative patterns just in case
+    html_content = html_content.replace('}/ws?session_id=', '}/company/ws?session_id=')
+    if old_content != html_content:
+        logger.info(f"Company: Successfully replaced WebSocket URL")
+    else:
+        logger.warning(f"Company: No WebSocket URL replacement occurred")
+        logger.info(f"Searching for '/ws?session_id=' in HTML: {'/ws?session_id=' in html_content}")
+        # Log the relevant line to debug
+        lines = html_content.split('\\n')
+        for i, line in enumerate(lines):
+            if '/ws' in line:
+                logger.info(f"Line {i+1}: {line.strip()}")
+    
+    return HTMLResponse(content=html_content)
+
 # WebSocket endpoints
 @app.websocket("/strudel/ws")
 async def strudel_websocket_endpoint(websocket: WebSocket):
@@ -198,9 +241,38 @@ async def button_websocket_endpoint(websocket: WebSocket):
         logger.error(f"Button WebSocket error: {e}")
         button_manager.disconnect(websocket)
 
+@app.websocket("/company/ws")
+async def company_websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for Company Selector interface"""
+    session_id = websocket.query_params.get('session_id')
+    logger.info(f"Company WebSocket connection attempt with session_id='{session_id}'")
+    
+    await company_manager.connect(websocket, session_id)
+    
+    try:
+        while True:
+            data = await websocket.receive_text()
+            try:
+                message = json.loads(data)
+                if message.get('type') == 'company-state-response':
+                    request_id = message.get('request_id')
+                    state = message.get('state', {})
+                    if request_id:
+                        company_module.handle_state_response(request_id, state)
+                elif message.get('type') == 'ping':
+                    await websocket.send_text(json.dumps({'type': 'pong'}))
+            except json.JSONDecodeError:
+                logger.error(f"Invalid JSON received: {data}")
+    except WebSocketDisconnect:
+        company_manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"Company WebSocket error: {e}")
+        company_manager.disconnect(websocket)
+
 # Mount static file directories
 app.mount("/strudel/static", StaticFiles(directory=str(Path(__file__).parent / "mcp-strudel" / "static")), name="strudel_static")
 app.mount("/button/static", StaticFiles(directory=str(Path(__file__).parent / "mcp-button-state" / "static")), name="button_static")
+app.mount("/company/static", StaticFiles(directory=str(Path(__file__).parent / "mcp-company-selector" / "static")), name="company_static")
 
 # Health check endpoint
 @app.get("/")
@@ -210,11 +282,13 @@ async def root():
         "endpoints": {
             "mcp_endpoints": [
                 "https://mcp-ui-servers.mcp.mathplosion.com/mcp-strudel/sse",
-                "https://mcp-ui-servers.mcp.mathplosion.com/mcp-button-state/sse"
+                "https://mcp-ui-servers.mcp.mathplosion.com/mcp-button-state/sse",
+                "https://mcp-ui-servers.mcp.mathplosion.com/mcp-company-selector/sse"
             ],
             "ui_endpoints": [
                 "https://mcp-ui-servers.mcp.mathplosion.com/strudel",
-                "https://mcp-ui-servers.mcp.mathplosion.com/button"
+                "https://mcp-ui-servers.mcp.mathplosion.com/button",
+                "https://mcp-ui-servers.mcp.mathplosion.com/company"
             ]
         }
     }
@@ -222,6 +296,7 @@ async def root():
 # Mount each MCP server at its respective path
 app.mount("/mcp-strudel", strudel_http_app)
 app.mount("/mcp-button-state", button_http_app)
+app.mount("/mcp-company-selector", company_http_app)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
