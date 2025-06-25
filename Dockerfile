@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the unified server and subdirectories
 COPY unified_sse_server.py .
+COPY shared_websocket.py .
 COPY mcp-strudel/ ./mcp-strudel/
 COPY mcp-button-state/ ./mcp-button-state/
 
