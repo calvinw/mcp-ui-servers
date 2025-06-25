@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Strudel MCP</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@strudel/repl@latest"></script>
     <!-- SESSION_ID_PLACEHOLDER -->
 </head>
 <body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col p-3 md:p-6">
@@ -24,10 +25,15 @@
         <div class="w-full lg:w-80 order-1 lg:order-2">
             <div class="bg-blue-50 border border-blue-200 rounded p-3">
                 <h3 class="text-sm md:text-base font-semibold text-blue-900 mb-2">Session ID</h3>
-                <div class="bg-white border border-blue-300 rounded px-3 py-2">
-                    <span id="sessionPhrase" class="text-sm font-mono text-blue-800 select-all">
-                        session_id: ----
-                    </span>
+                <div class="flex items-center gap-2">
+                    <div class="bg-white border border-blue-300 rounded px-2 py-1 flex-1">
+                        <span id="sessionPhrase" class="text-sm font-mono text-blue-800 select-all">
+                            Session Id: ----
+                        </span>
+                    </div>
+                    <button onclick="copySessionPhrase()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-2 rounded text-sm transition-all duration-200 hover:scale-105 touch-manipulation">
+                        Copy
+                    </button>
                 </div>
                 <p class="text-blue-700 text-xs md:text-sm mt-1">Share with your LLM to enable live coding</p>
             </div>
@@ -120,13 +126,12 @@
         </div>
         
         <div class="mb-4">
-            <script src="https://unpkg.com/@strudel/repl@1.0.2"></script>
-            <strudel-editor id="strudelEditor" class="w-full h-8 block rounded-lg overflow-hidden shadow-lg">
+            <strudel-repl id="strudelRepl" class="w-full h-96 block rounded-lg overflow-hidden shadow-lg">
                 <!--
 // Use buttons above or paste Strudel code here
 silence
                 -->
-            </strudel-editor>
+            </strudel-repl>
         </div>
     </div>
     
@@ -353,31 +358,16 @@ silence
         }
 
         function playCurrentCode() {
-            const editor = document.getElementById('strudelEditor');
-            if (!editor || !editor.editor) {
-                addLogEntry('Editor not ready yet', 'error');
-                return;
-            }
-
-            // Get current code from the editor
-            let currentCode = '';
-            
-            if (editor.editor.editor && editor.editor.editor.state) {
-                currentCode = editor.editor.editor.state.doc.toString();
-            } else if (editor.editor.code) {
-                currentCode = editor.editor.code;
-            }
-
-            if (!currentCode || currentCode.trim() === '') {
-                addLogEntry('No code to play', 'warning');
+            const repl = document.getElementById('strudelRepl');
+            if (!repl || !repl.editor) {
+                addLogEntry('REPL not ready yet', 'error');
                 return;
             }
 
             addLogEntry('Playing current code');
 
             try {
-                editor.editor.code = currentCode;
-                editor.editor.evaluate();
+                repl.editor.evaluate();
                 addLogEntry(' Playing current code');
             } catch (e) {
                 addLogEntry(` Evaluation failed: ${e.message}`, 'error');
@@ -385,14 +375,14 @@ silence
         }
 
         function stopAll() {
-            const editor = document.getElementById('strudelEditor');
-            if (!editor || !editor.editor) {
-                addLogEntry('Editor not ready yet', 'error');
+            const repl = document.getElementById('strudelRepl');
+            if (!repl || !repl.editor) {
+                addLogEntry('REPL not ready yet', 'error');
                 return;
             }
 
             try {
-                editor.editor.stop();
+                repl.editor.stop();
                 addLogEntry(' Stopped all patterns');
             } catch (e) {
                 addLogEntry(` Stop failed: ${e.message}`, 'error');
@@ -400,34 +390,16 @@ silence
         }
 
         function setCustomCode(code) {
-            const editor = document.getElementById('strudelEditor');
-            if (!editor || !editor.editor) {
-                addLogEntry('Editor not ready yet', 'error');
+            const repl = document.getElementById('strudelRepl');
+            if (!repl || !repl.editor) {
+                addLogEntry('REPL not ready yet', 'error');
                 return;
             }
 
-            // Set the code
-            editor.editor.code = code;
-
-            // Update the visual editor
-            if (editor.editor.editor && editor.editor.editor.dispatch) {
-                try {
-                    const transaction = editor.editor.editor.state.update({
-                        changes: {
-                            from: 0,
-                            to: editor.editor.editor.state.doc.length,
-                            insert: code
-                        }
-                    });
-                    editor.editor.editor.dispatch(transaction);
-                } catch (e) {
-                    addLogEntry(`Visual update failed: ${e.message}`, 'warning');
-                }
-            }
-
-            // Trigger evaluation
+            // Set the code using the editor property
             try {
-                editor.editor.evaluate();
+                repl.editor.setCode(code);
+                repl.editor.evaluate();
                 addLogEntry(' Pattern playing');
             } catch (e) {
                 addLogEntry(` Evaluation failed: ${e.message}`, 'error');
@@ -435,19 +407,19 @@ silence
         }
 
         function sendCurrentCodeToServer(requestId) {
-            const editor = document.getElementById('strudelEditor');
-            if (!editor || !editor.editor) {
-                addLogEntry('Editor not ready for code retrieval', 'error');
+            const repl = document.getElementById('strudelRepl');
+            if (!repl || !repl.editor) {
+                addLogEntry('REPL not ready for code retrieval', 'error');
                 return;
             }
 
             // Get current code from the editor
             let currentCode = '';
             
-            if (editor.editor.editor && editor.editor.editor.state) {
-                currentCode = editor.editor.editor.state.doc.toString();
-            } else if (editor.editor.code) {
-                currentCode = editor.editor.code;
+            try {
+                currentCode = repl.editor.getCode();
+            } catch (e) {
+                currentCode = '// Error retrieving code';
             }
 
             if (!currentCode || currentCode.trim() === '') {
@@ -491,13 +463,34 @@ silence
             setCustomCode
         };
 
+        function copySessionPhrase() {
+            const sessionPhrase = document.getElementById('sessionPhrase').textContent;
+            if (sessionPhrase && !sessionPhrase.includes('----')) {
+                navigator.clipboard.writeText(sessionPhrase).then(() => {
+                    addLogEntry(`Session phrase copied to clipboard: "${sessionPhrase}"`);
+                    
+                    // Visual feedback
+                    const button = event.target;
+                    const originalText = button.textContent;
+                    button.textContent = 'Copied!';
+                    button.className = button.className.replace('bg-blue-600 hover:bg-blue-700', 'bg-green-600 hover:bg-green-700');
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.className = button.className.replace('bg-green-600 hover:bg-green-700', 'bg-blue-600 hover:bg-blue-700');
+                    }, 2000);
+                }).catch(() => {
+                    addLogEntry('Failed to copy session phrase', 'error');
+                });
+            }
+        }
 
         // Initialize WebSocket connection when page loads
         document.addEventListener('DOMContentLoaded', () => {
             // Display session ID and phrase
             if (window.sessionId) {
                 const sessionCode = window.sessionId.toLowerCase();
-                const sessionPhrase = `session_id: ${sessionCode}`;
+                const sessionPhrase = `Session Id: ${sessionCode}`;
                 document.getElementById('sessionPhrase').textContent = sessionPhrase;
                 addLogEntry(`Session ready: ${sessionCode.toUpperCase()}`);
             }
@@ -515,7 +508,7 @@ silence
                 setCustomCode(starterCode);
                 addLogEntry('Loaded starter pattern');
                 
-            }, 1000);
+            }, 3000); // Increased delay for REPL loading
         });
 
         console.log(' Strudel MCP Live Coding ready!');

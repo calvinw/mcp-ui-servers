@@ -14,9 +14,9 @@
                 <div id="statusDot" class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
                 <span id="statusText" class="text-gray-700">Connecting to MCP server...</span>
             </div>
-            <div class="bg-blue-50 border border-blue-200 rounded px-3 py-1">
-                <span class="text-sm font-mono text-blue-800" id="sessionId">
-                    Session: SESSION_ID_PLACEHOLDER
+            <div class="bg-blue-50 border border-blue-200 rounded px-3 py-2">
+                <span class="text-sm font-mono text-blue-800 select-all" id="sessionId">
+                    session_id: SESSION_ID_PLACEHOLDER
                 </span>
             </div>
         </div>
@@ -164,7 +164,7 @@
         const toggleModeButton = document.getElementById('toggleModeButton');
 
         // Get session ID from the placeholder
-        const sessionId = document.getElementById('sessionId').textContent.replace('Session: ', '').trim();
+        const sessionId = document.getElementById('sessionId').textContent.replace('session_id: ', '').trim();
 
         function addLogEntry(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
@@ -292,11 +292,12 @@
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            addLogEntry(`Button interface ready (Session: ${sessionId})`);
+            addLogEntry(`Button interface ready (session_id: ${sessionId})`);
             updatePageData(); // Initialize page data
             updateStateDisplay();
             connectWebSocket();
         });
+
 
         console.log('Button State Demo initialized!');
     </script>
