@@ -1,34 +1,43 @@
+"""
+Button State SSE Server - Following BusMgmtDoltDatabase working pattern
+"""
+
 import os
 import sys
 from pathlib import Path
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import uvicorn
-import json
 import logging
-from typing import Any
-from button_state_server import mcp, set_websocket_manager, handle_state_response
+from button_state_server import mcp, set_websocket_manager
 
 # Add parent directory to path for shared modules
 sys.path.append(str(Path(__file__).parent.parent))
 from shared_websocket import ConnectionManager
 
+# Import the UI app
+from ui_app import ui_app, manager as ui_manager
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Set the UI manager as the MCP server's WebSocket manager
+set_websocket_manager(ui_manager)
 
-# Create WebSocket manager and make it available to server.py
-manager = ConnectionManager()
-set_websocket_manager(manager)
-
-# Create the ASGI app for MCP
+# Create the ASGI app for MCP (following BusMgmtDoltDatabase pattern)
 http_app = mcp.http_app(transport="sse", path='/sse')
 
-# Wrap with FastAPI
-app = FastAPI(title="Button State MCP Server")
+# Minimal OAuth endpoint (just enough for Claude.ai)
+async def oauth_metadata(request: Request):
+    base_url = str(request.base_url).rstrip("/")
+    return JSONResponse({
+        "issuer": base_url
+    })
+
+# Create main FastAPI app
+app = FastAPI(title="Button State MCP Server with UI")
 
 # Add CORS middleware
 app.add_middleware(
@@ -39,114 +48,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-static_path = Path(__file__).parent / "static"
-if static_path.exists():
-    app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+# Add the OAuth metadata route
+app.add_api_route("/.well-known/oauth-authorization-server", oauth_metadata, methods=["GET"])
 
-@app.get("/")
-async def root():
-    """Root endpoint that redirects to the button interface"""
-    return JSONResponse({
-        "message": "Button State MCP Server",
-        "interfaces": {
-            "mcp": "/sse",
-            "button": "/button",
-            "websocket": "/ws"
-        }
-    })
+# Mount the UI app at /button path FIRST (specific routes before catch-all)
+app.mount("/button", ui_app)
 
-@app.get("/debug/connections")
-async def debug_connections():
-    """Debug endpoint to see active connections"""
-    return JSONResponse({
-        "total_connections": len(manager.active_connections),
-        "session_connections": list(manager.session_connections.keys()),
-        "has_connections": manager.has_connections()
-    })
-
-@app.get("/button")
-async def button_interface():
-    """Serve the button interface HTML page"""
-    session_id = manager.generate_session_id()
-    
-    # Read the HTML template
-    html_path = Path(__file__).parent / "static" / "index.html"
-    if not html_path.exists():
-        return HTMLResponse("""
-        <html>
-            <head><title>Button Interface Not Found</title></head>
-            <body>
-                <h1>Button Interface Not Found</h1>
-                <p>The static/index.html file is missing.</p>
-            </body>
-        </html>
-        """)
-    
-    with open(html_path, 'r') as f:
-        html_content = f.read()
-    
-    # Replace placeholder with actual session ID
-    html_content = html_content.replace('SESSION_ID_PLACEHOLDER', session_id)
-    
-    return HTMLResponse(html_content)
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, session_id: str = None):
-    """WebSocket endpoint for real-time communication with button interface"""
-    # Get session_id from query parameters
-    session_id = websocket.query_params.get('session_id')
-    logger.info(f"WebSocket connection attempt with session_id='{session_id}'")
-    
-    await manager.connect(websocket, session_id)
-    
-    try:
-        while True:
-            # Receive message from client
-            data = await websocket.receive_text()
-            
-            try:
-                message = json.loads(data)
-                logger.info(f"Received WebSocket message: {message}")
-                
-                # Handle different message types
-                if message.get('type') == 'button-state-response':
-                    # Handle button state response from client
-                    request_id = message.get('request_id')
-                    state = message.get('state', {})
-                    
-                    if request_id:
-                        handle_state_response(request_id, state)
-                    
-                elif message.get('type') == 'ping':
-                    # Respond to ping
-                    await websocket.send_text(json.dumps({'type': 'pong'}))
-                    
-                else:
-                    logger.warning(f"Unknown message type: {message.get('type')}")
-                    
-            except json.JSONDecodeError:
-                logger.error(f"Invalid JSON received: {data}")
-            except Exception as e:
-                logger.error(f"Error processing WebSocket message: {e}")
-                
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        manager.disconnect(websocket)
-
-@app.get("/oauth/metadata")
-async def oauth_metadata():
-    """OAuth metadata endpoint for MCP client discovery"""
-    return JSONResponse({
-        "authorization_endpoint": "https://example.com/oauth/authorize",
-        "token_endpoint": "https://example.com/oauth/token"
-    })
-
-# Mount the MCP server to handle SSE - must be AFTER all other routes
+# Mount the MCP server at root (following BusMgmtDoltDatabase pattern)
+# This makes /sse available directly
 app.mount("/", http_app)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8001))
+    port = int(os.environ.get("PORT", 8080))
+    print(f"""
+🔘 Button State MCP Server Starting on port {port}!
+
+🌐 Web Interface: http://localhost:{port}/button
+🤖 MCP Endpoint: http://localhost:{port}/sse
+⚡ WebSocket: http://localhost:{port}/button/ws
+
+Ready for both web browsers and Claude integration! 🎯
+    """)
     uvicorn.run(app, host="0.0.0.0", port=port)

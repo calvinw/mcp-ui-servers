@@ -1,6 +1,0 @@
-{
-  "Model": "anthropic/claude-3.5-haiku",
-  "Temperature": 0,
-  "CreateToolButtons": true,
-  "last_updated": "2025-06-22T22:05:21.914080"
-}

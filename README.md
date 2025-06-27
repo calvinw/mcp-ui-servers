@@ -4,9 +4,6 @@ Collection of MCP (Model Context Protocol) servers with user interface component
 
 ## Projects
 
-### mcp-strudel
-MCP server for Strudel live coding environment with web-based interface.
-
 ### mcp-button-state  
 MCP server for button state management with interactive UI controls.
 

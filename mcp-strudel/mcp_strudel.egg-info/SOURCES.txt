@@ -1,7 +1,0 @@
-README.md
-pyproject.toml
-mcp_strudel.egg-info/PKG-INFO
-mcp_strudel.egg-info/SOURCES.txt
-mcp_strudel.egg-info/dependency_links.txt
-mcp_strudel.egg-info/requires.txt
-mcp_strudel.egg-info/top_level.txt

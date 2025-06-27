@@ -82,7 +82,6 @@ mcp-ui-servers/
 ```
 
 ## Benefits
-
 1. **Code Reusability**: Single implementation used across all servers
 2. **Consistency**: Same behavior and API across different MCP servers
 3. **Maintainability**: Bug fixes and improvements apply to all servers

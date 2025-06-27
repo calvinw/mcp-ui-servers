@@ -1,59 +1,72 @@
+"""
+Clean Unified SSE Server
+Mounts 2 FastMCP servers (for MCP protocol) and 2 FastAPI apps (for web UI) separately
+Button State and Company Selector only - Strudel moved to separate repo
+"""
+
 import os
 import sys
 from pathlib import Path
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-import json
-import logging
-from shared_websocket import ConnectionManager
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 import uvicorn
 import importlib.util
 
 # Add subdirectories to Python path
 sys.path.append(str(Path(__file__).parent / "mcp-button-state"))
-sys.path.append(str(Path(__file__).parent / "mcp-strudel"))
 sys.path.append(str(Path(__file__).parent / "mcp-company-selector"))
 
-# Import button state server
-button_path = Path(__file__).parent / "mcp-button-state" / "button_state_server.py"
-spec = importlib.util.spec_from_file_location("button_state_server", button_path)
-button_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(button_module)
-button_mcp = button_module.mcp
+# Function to load a module from a specific path
+def load_module_from_path(module_name: str, file_path: str):
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
 
-# Import strudel server
-strudel_path = Path(__file__).parent / "mcp-strudel" / "strudel_server.py"
-spec = importlib.util.spec_from_file_location("strudel_server", strudel_path)
-strudel_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(strudel_module)
-strudel_mcp = strudel_module.mcp
+# Change to each directory and load both MCP servers and UI apps
+original_cwd = os.getcwd()
 
-# Import company selector server
-company_path = Path(__file__).parent / "mcp-company-selector" / "company_selector_server.py"
-spec = importlib.util.spec_from_file_location("company_selector_server", company_path)
-company_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(company_module)
-company_mcp = company_module.mcp
+# Load Button components
+button_dir = Path(__file__).parent / "mcp-button-state"
+os.chdir(str(button_dir))
+button_server_module = load_module_from_path("button_server", str(button_dir / "button_state_server.py"))
+button_ui_module = load_module_from_path("button_ui", str(button_dir / "ui_app.py"))
+button_mcp_app = button_server_module.mcp.http_app(transport="sse", path='/sse')
+button_ui_app = button_ui_module.ui_app
+os.chdir(original_cwd)
 
+# Load Company components
+company_dir = Path(__file__).parent / "mcp-company-selector"
+os.chdir(str(company_dir))
+company_server_module = load_module_from_path("company_server", str(company_dir / "company_selector_server.py"))
+company_ui_module = load_module_from_path("company_ui", str(company_dir / "ui_app.py"))
+company_mcp_app = company_server_module.mcp.http_app(transport="sse", path='/sse')
+company_ui_app = company_ui_module.ui_app
+os.chdir(original_cwd)
 
-# Create WebSocket managers and make them available to servers
-strudel_manager = ConnectionManager()
-button_manager = ConnectionManager()
-company_manager = ConnectionManager()
-strudel_module.set_websocket_manager(strudel_manager)
-button_module.set_websocket_manager(button_manager)
-company_module.set_websocket_manager(company_manager)
+# Connect UI WebSocket managers to MCP servers
+button_server_module.set_websocket_manager(button_ui_module.manager) 
+company_server_module.set_websocket_manager(company_ui_module.manager)
 
-# Create SSE apps for each MCP server
-button_http_app = button_mcp.http_app(transport="sse", path='/sse')
-strudel_http_app = strudel_mcp.http_app(transport="sse", path='/sse')
-company_http_app = company_mcp.http_app(transport="sse", path='/sse')
+# Share pending request dictionaries between UI and MCP modules
+# This ensures browser responses reach the MCP server's waiting requests
+
+# The UI modules import the server modules directly, so we need to patch the 
+# imported functions to use the unified server's module instances
+
+# For button state: patch the handle_state_response function that was imported
+original_button_handle = button_ui_module.handle_state_response
+def patched_button_handle(request_id: str, state):
+    return button_server_module.handle_state_response(request_id, state)
+button_ui_module.handle_state_response = patched_button_handle
+
+# For company selector: patch the handle_state_response function that was imported  
+original_company_handle = company_ui_module.handle_state_response
+def patched_company_handle(request_id: str, state):
+    return company_server_module.handle_state_response(request_id, state)
+company_ui_module.handle_state_response = patched_company_handle
 
 # Minimal OAuth endpoint (just enough for Claude.ai)
 async def oauth_metadata(request: Request):
@@ -64,8 +77,8 @@ async def oauth_metadata(request: Request):
 
 # Create main FastAPI app
 app = FastAPI(
-    title="MCP UI Servers",
-    description="Unified server for Strudel and Button State MCP servers with UI interfaces",
+    title="MCP UI Servers - Button & Company",
+    description="Unified server for Button State and Company Selector apps",
     version="1.0.0"
 )
 
@@ -82,231 +95,46 @@ app.add_middleware(
 # Add the OAuth metadata route
 app.add_api_route("/.well-known/oauth-authorization-server", oauth_metadata, methods=["GET"])
 
-
-# UI Routes
-@app.get("/strudel")
-async def strudel_ui():
-    """Serve Strudel live coding interface"""
-    session_id = strudel_manager.generate_session_id()
-    template_path = Path(__file__).parent / "mcp-strudel" / "static" / "index.html"
-    
-    with open(template_path, 'r') as f:
-        html_content = f.read()
-    
-    # Inject session ID and update WebSocket URL
-    html_content = html_content.replace(
-        '<!-- SESSION_ID_PLACEHOLDER -->', 
-        f'<script>window.sessionId = "{session_id}";</script>'
-    )
-    # Update WebSocket URL to use the unified server path
-    old_content = html_content
-    html_content = html_content.replace('/ws?session_id=', '/strudel/ws?session_id=')
-    # Also try alternative patterns just in case
-    html_content = html_content.replace('}/ws?session_id=', '}/strudel/ws?session_id=')
-    if old_content != html_content:
-        logger.info(f"Strudel: Successfully replaced WebSocket URL")
-    else:
-        logger.warning(f"Strudel: No WebSocket URL replacement occurred")
-        logger.info(f"Searching for '/ws?session_id=' in HTML: {'/ws?session_id=' in html_content}")
-        # Log the relevant line to debug
-        lines = html_content.split('\\n')
-        for i, line in enumerate(lines):
-            if '/ws' in line:
-                logger.info(f"Line {i+1}: {line.strip()}")
-    
-    return HTMLResponse(content=html_content)
-
-@app.get("/button")
-async def button_ui():
-    """Serve Button State interface"""
-    session_id = button_manager.generate_session_id()
-    template_path = Path(__file__).parent / "mcp-button-state" / "static" / "index.html"
-    
-    with open(template_path, 'r') as f:
-        html_content = f.read()
-    
-    # Inject session ID and update WebSocket URL
-    html_content = html_content.replace(
-        'SESSION_ID_PLACEHOLDER', 
-        session_id
-    )
-    # Update WebSocket URL to use the unified server path
-    old_content = html_content
-    html_content = html_content.replace('/ws?session_id=', '/button/ws?session_id=')
-    # Also try alternative patterns just in case
-    html_content = html_content.replace('}/ws?session_id=', '}/button/ws?session_id=')
-    if old_content != html_content:
-        logger.info(f"Button: Successfully replaced WebSocket URL")
-    else:
-        logger.warning(f"Button: No WebSocket URL replacement occurred")
-        logger.info(f"Searching for '/ws?session_id=' in HTML: {'/ws?session_id=' in html_content}")
-        # Log the relevant line to debug
-        lines = html_content.split('\\n')
-        for i, line in enumerate(lines):
-            if '/ws' in line:
-                logger.info(f"Line {i+1}: {line.strip()}")
-    
-    return HTMLResponse(content=html_content)
-
-@app.get("/company")
-async def company_ui():
-    """Serve Company Selector interface"""
-    session_id = company_manager.generate_session_id()
-    template_path = Path(__file__).parent / "mcp-company-selector" / "static" / "index.html"
-    
-    with open(template_path, 'r') as f:
-        html_content = f.read()
-    
-    # Inject session ID and update WebSocket URL
-    html_content = html_content.replace(
-        'SESSION_ID_PLACEHOLDER', 
-        session_id
-    )
-    # Update WebSocket URL to use the unified server path
-    old_content = html_content
-    html_content = html_content.replace('/ws?session_id=', '/company/ws?session_id=')
-    # Also try alternative patterns just in case
-    html_content = html_content.replace('}/ws?session_id=', '}/company/ws?session_id=')
-    if old_content != html_content:
-        logger.info(f"Company: Successfully replaced WebSocket URL")
-    else:
-        logger.warning(f"Company: No WebSocket URL replacement occurred")
-        logger.info(f"Searching for '/ws?session_id=' in HTML: {'/ws?session_id=' in html_content}")
-        # Log the relevant line to debug
-        lines = html_content.split('\\n')
-        for i, line in enumerate(lines):
-            if '/ws' in line:
-                logger.info(f"Line {i+1}: {line.strip()}")
-    
-    return HTMLResponse(content=html_content)
-
-# WebSocket endpoints
-@app.websocket("/strudel/ws")
-async def strudel_websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for Strudel interface"""
-    session_id = websocket.query_params.get('session_id')
-    logger.info(f"Strudel WebSocket connection attempt with session_id='{session_id}'")
-    
-    await strudel_manager.connect(websocket, session_id)
-    
-    try:
-        while True:
-            data = await websocket.receive_text()
-            try:
-                message = json.loads(data)
-                if message.get("type") == "ping":
-                    await websocket.send_text(json.dumps({"type": "pong"}))
-                elif message.get("type") == "current-code-response":
-                    request_id = message.get("request_id", "")
-                    current_code = message.get("code", "")
-                    if request_id:
-                        strudel_module.handle_code_response(request_id, current_code)
-                elif message.get("type") == "evaluation-error":
-                    error_msg = message.get("error", "Unknown error")
-                    code_snippet = message.get("code", "Unknown code")
-                    logger.error(f"Strudel evaluation error: {error_msg} | Code: {code_snippet}")
-            except json.JSONDecodeError:
-                logger.warning(f"Invalid JSON received: {data}")
-    except WebSocketDisconnect:
-        strudel_manager.disconnect(websocket)
-    except Exception as e:
-        logger.error(f"Strudel WebSocket error: {e}")
-        strudel_manager.disconnect(websocket)
-
-@app.websocket("/button/ws")
-async def button_websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for Button State interface"""
-    session_id = websocket.query_params.get('session_id')
-    logger.info(f"Button WebSocket connection attempt with session_id='{session_id}'")
-    
-    await button_manager.connect(websocket, session_id)
-    
-    try:
-        while True:
-            data = await websocket.receive_text()
-            try:
-                message = json.loads(data)
-                if message.get('type') == 'button-state-response':
-                    request_id = message.get('request_id')
-                    state = message.get('state', {})
-                    if request_id:
-                        button_module.handle_state_response(request_id, state)
-                elif message.get('type') == 'ping':
-                    await websocket.send_text(json.dumps({'type': 'pong'}))
-            except json.JSONDecodeError:
-                logger.error(f"Invalid JSON received: {data}")
-    except WebSocketDisconnect:
-        button_manager.disconnect(websocket)
-    except Exception as e:
-        logger.error(f"Button WebSocket error: {e}")
-        button_manager.disconnect(websocket)
-
-@app.websocket("/company/ws")
-async def company_websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for Company Selector interface"""
-    session_id = websocket.query_params.get('session_id')
-    logger.info(f"Company WebSocket connection attempt with session_id='{session_id}'")
-    
-    await company_manager.connect(websocket, session_id)
-    
-    try:
-        while True:
-            data = await websocket.receive_text()
-            try:
-                message = json.loads(data)
-                if message.get('type') == 'company-state-response':
-                    request_id = message.get('request_id')
-                    state = message.get('state', {})
-                    if request_id:
-                        company_module.handle_state_response(request_id, state)
-                elif message.get('type') == 'ping':
-                    await websocket.send_text(json.dumps({'type': 'pong'}))
-            except json.JSONDecodeError:
-                logger.error(f"Invalid JSON received: {data}")
-    except WebSocketDisconnect:
-        company_manager.disconnect(websocket)
-    except Exception as e:
-        logger.error(f"Company WebSocket error: {e}")
-        company_manager.disconnect(websocket)
-
-# Mount static file directories
-app.mount("/strudel/static", StaticFiles(directory=str(Path(__file__).parent / "mcp-strudel" / "static")), name="strudel_static")
-app.mount("/button/static", StaticFiles(directory=str(Path(__file__).parent / "mcp-button-state" / "static")), name="button_static")
-app.mount("/company/static", StaticFiles(directory=str(Path(__file__).parent / "mcp-company-selector" / "static")), name="company_static")
-
 # Health check endpoint
 @app.get("/")
 async def root():
     return {
-        "message": "MCP UI Servers",
+        "message": "MCP UI Servers - Button & Company",
+        "architecture": "Separate MCP servers and UI apps",
         "endpoints": {
             "mcp_endpoints": [
-                "https://mcp-ui-servers.mcp.mathplosion.com/mcp-strudel/sse",
-                "https://mcp-ui-servers.mcp.mathplosion.com/mcp-button-state/sse",
-                "https://mcp-ui-servers.mcp.mathplosion.com/mcp-company-selector/sse"
+                "http://localhost:8080/mcp-button-state/sse",
+                "http://localhost:8080/mcp-company-selector/sse"
             ],
             "ui_endpoints": [
-                "https://mcp-ui-servers.mcp.mathplosion.com/strudel",
-                "https://mcp-ui-servers.mcp.mathplosion.com/button",
-                "https://mcp-ui-servers.mcp.mathplosion.com/company"
+                "http://localhost:8080/button",
+                "http://localhost:8080/company"
             ]
         }
     }
 
-# Mount each MCP server at its respective path
-app.mount("/mcp-strudel", strudel_http_app)
-app.mount("/mcp-button-state", button_http_app)
-app.mount("/mcp-company-selector", company_http_app)
+# Mount MCP servers (for Claude integration)
+app.mount("/mcp-button-state", button_mcp_app)
+app.mount("/mcp-company-selector", company_mcp_app)
+
+# Mount UI apps (for web interfaces)
+app.mount("/button", button_ui_app)
+app.mount("/company", company_ui_app)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     print(f"""
-🎵 MCP UI Servers Starting on port {port}!
+🔘 MCP UI Servers Starting on port {port}! (Button & Company)
 
-MCP endpoints available at:
-- Strudel MCP: http://localhost:{port}/mcp-strudel/sse
-- Button State MCP: http://localhost:{port}/mcp-button-state/sse
+📱 Web UI endpoints:
+- Button State UI: http://localhost:{port}/button
+- Company Selector UI: http://localhost:{port}/company
 
-Ready for Claude integration! 🤖
+🤖 MCP endpoints (for Claude):
+- Button State MCP: http://localhost:{port}/mcp-button-state/sse  
+- Company Selector MCP: http://localhost:{port}/mcp-company-selector/sse
+
+✨ Architecture: 2 MCP servers + 2 UI apps mounted separately
+Ready for both web browsers and Claude integration! 🌐🤖
     """)
     uvicorn.run(app, host="0.0.0.0", port=port)

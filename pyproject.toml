@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mcp-ui-servers"
 version = "1.0.0"
-description = "Unified MCP servers with UI interfaces for Strudel and Button State"
+description = "Unified MCP servers with UI interfaces for Company and Button State"
 authors = [{name = "MCP UI Servers", email = "noreply@example.com"}]
 readme = "README.md"
 license = {text = "MIT"}
@@ -19,6 +19,8 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
+    "openai",
+    "chainlit",
     "fastapi>=0.115.0",
     "fastmcp>=2.8.0",
     "uvicorn[standard]>=0.34.0",

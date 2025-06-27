@@ -181,3 +181,6 @@ Thumbs.db
 mcp-strudel/strudel/
 # Strudel docs directory (nested git repo causing submodule issues)
 mcp-strudel/docs/strudel/
+
+# Chainlit configuration and cache files
+.chainlit/
