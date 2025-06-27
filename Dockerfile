@@ -13,6 +13,7 @@ COPY unified_sse_server.py .
 COPY shared_websocket.py .
 COPY mcp-button-state/ ./mcp-button-state/
 COPY mcp-company-selector/ ./mcp-company-selector/
+COPY mcp-company-to-company/ ./mcp-company-to-company/
 
 # Expose port for the unified proxy server
 EXPOSE 8080
