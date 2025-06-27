@@ -1,7 +1,7 @@
 """
 Clean Unified SSE Server
-Mounts 2 FastMCP servers (for MCP protocol) and 2 FastAPI apps (for web UI) separately
-Button State and Company Selector only - Strudel moved to separate repo
+Mounts 3 FastMCP servers (for MCP protocol) and 3 FastAPI apps (for web UI) separately
+Button State, Company Selector, and Company-to-Company - Strudel moved to separate repo
 """
 
 import os
@@ -16,6 +16,7 @@ import importlib.util
 # Add subdirectories to Python path
 sys.path.append(str(Path(__file__).parent / "mcp-button-state"))
 sys.path.append(str(Path(__file__).parent / "mcp-company-selector"))
+sys.path.append(str(Path(__file__).parent / "mcp-company-to-company"))
 
 # Function to load a module from a specific path
 def load_module_from_path(module_name: str, file_path: str):
@@ -46,9 +47,19 @@ company_mcp_app = company_server_module.mcp.http_app(transport="sse", path='/sse
 company_ui_app = company_ui_module.ui_app
 os.chdir(original_cwd)
 
+# Load Company-to-Company components
+company_to_company_dir = Path(__file__).parent / "mcp-company-to-company"
+os.chdir(str(company_to_company_dir))
+company_to_company_server_module = load_module_from_path("company_to_company_server", str(company_to_company_dir / "company_to_company_server.py"))
+company_to_company_ui_module = load_module_from_path("company_to_company_ui", str(company_to_company_dir / "ui_app.py"))
+company_to_company_mcp_app = company_to_company_server_module.mcp.http_app(transport="sse", path='/sse')
+company_to_company_ui_app = company_to_company_ui_module.ui_app
+os.chdir(original_cwd)
+
 # Connect UI WebSocket managers to MCP servers
 button_server_module.set_websocket_manager(button_ui_module.manager) 
 company_server_module.set_websocket_manager(company_ui_module.manager)
+company_to_company_server_module.set_websocket_manager(company_to_company_ui_module.manager)
 
 # Share pending request dictionaries between UI and MCP modules
 # This ensures browser responses reach the MCP server's waiting requests
@@ -68,6 +79,12 @@ def patched_company_handle(request_id: str, state):
     return company_server_module.handle_state_response(request_id, state)
 company_ui_module.handle_state_response = patched_company_handle
 
+# For company-to-company: patch the handle_state_response function that was imported
+original_company_to_company_handle = company_to_company_ui_module.handle_state_response
+def patched_company_to_company_handle(request_id: str, state):
+    return company_to_company_server_module.handle_state_response(request_id, state)
+company_to_company_ui_module.handle_state_response = patched_company_to_company_handle
+
 # Minimal OAuth endpoint (just enough for Claude.ai)
 async def oauth_metadata(request: Request):
     base_url = str(request.base_url).rstrip("/")
@@ -77,8 +94,8 @@ async def oauth_metadata(request: Request):
 
 # Create main FastAPI app
 app = FastAPI(
-    title="MCP UI Servers - Button & Company",
-    description="Unified server for Button State and Company Selector apps",
+    title="MCP UI Servers - Button, Company & Company-to-Company",
+    description="Unified server for Button State, Company Selector, and Company-to-Company apps",
     version="1.0.0"
 )
 
@@ -99,16 +116,18 @@ app.add_api_route("/.well-known/oauth-authorization-server", oauth_metadata, met
 @app.get("/")
 async def root():
     return {
-        "message": "MCP UI Servers - Button & Company",
+        "message": "MCP UI Servers - Button, Company & Company-to-Company",
         "architecture": "Separate MCP servers and UI apps",
         "endpoints": {
             "mcp_endpoints": [
-                "http://localhost:8080/mcp-button-state/sse",
-                "http://localhost:8080/mcp-company-selector/sse"
+                "https://mcp-ui-servers.mcp.mathplosion.com/mcp-button-state/sse",
+                "https://mcp-ui-servers.mcp.mathplosion.com/mcp-company-selector/sse",
+                "https://mcp-ui-servers.mcp.mathplosion.com/mcp-company-to-company/sse"
             ],
             "ui_endpoints": [
-                "http://localhost:8080/button",
-                "http://localhost:8080/company"
+                "https://mcp-ui-servers.mcp.mathplosion.com/button",
+                "https://mcp-ui-servers.mcp.mathplosion.com/company",
+                "https://mcp-ui-servers.mcp.mathplosion.com/company_to_company"
             ]
         }
     }
@@ -116,25 +135,29 @@ async def root():
 # Mount MCP servers (for Claude integration)
 app.mount("/mcp-button-state", button_mcp_app)
 app.mount("/mcp-company-selector", company_mcp_app)
+app.mount("/mcp-company-to-company", company_to_company_mcp_app)
 
 # Mount UI apps (for web interfaces)
 app.mount("/button", button_ui_app)
 app.mount("/company", company_ui_app)
+app.mount("/company_to_company", company_to_company_ui_app)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     print(f"""
-🔘 MCP UI Servers Starting on port {port}! (Button & Company)
+🔘 MCP UI Servers Starting on port {port}! (Button, Company & Company-to-Company)
 
 📱 Web UI endpoints:
-- Button State UI: http://localhost:{port}/button
-- Company Selector UI: http://localhost:{port}/company
+- Button State UI: https://mcp-ui-servers.mcp.mathplosion.com/button
+- Company Selector UI: https://mcp-ui-servers.mcp.mathplosion.com/company
+- Company-to-Company UI: https://mcp-ui-servers.mcp.mathplosion.com/company_to_company
 
 🤖 MCP endpoints (for Claude):
-- Button State MCP: http://localhost:{port}/mcp-button-state/sse  
-- Company Selector MCP: http://localhost:{port}/mcp-company-selector/sse
+- Button State MCP: https://mcp-ui-servers.mcp.mathplosion.com/mcp-button-state/sse  
+- Company Selector MCP: https://mcp-ui-servers.mcp.mathplosion.com/mcp-company-selector/sse
+- Company-to-Company MCP: https://mcp-ui-servers.mcp.mathplosion.com/mcp-company-to-company/sse
 
-✨ Architecture: 2 MCP servers + 2 UI apps mounted separately
+✨ Architecture: 3 MCP servers + 3 UI apps mounted separately
 Ready for both web browsers and Claude integration! 🌐🤖
     """)
     uvicorn.run(app, host="0.0.0.0", port=port)

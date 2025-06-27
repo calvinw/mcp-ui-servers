@@ -184,3 +184,7 @@ mcp-strudel/docs/strudel/
 
 # Chainlit configuration and cache files
 .chainlit/
+
+# Additional ignores for MCP UI Servers
+app.py
+chainlit.md

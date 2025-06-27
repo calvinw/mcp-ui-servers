@@ -1,0 +1,19 @@
+[project]
+name = "mcp-company-to-company"
+version = "0.1.0"
+description = "MCP server with company-to-company comparison using WebSocket integration"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "uvicorn",
+    "fastmcp",
+    "fastapi",
+    "websockets"
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["company_to_company_server", "sse_company_to_company_server"]
